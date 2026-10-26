@@ -1,0 +1,6 @@
+{
+  "name": "Video Content Extractor & Reader",
+  "description": "Extract, organize, translate, and summarize video content.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
