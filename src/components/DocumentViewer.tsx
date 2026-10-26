@@ -300,6 +300,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
         onGenerateSummary={onGenerateSummary}
         isGenerating={isGeneratingSummary}
         contentAvailable={Boolean(data.transcript || data.textBeforeVideo || data.textAfterVideo)}
+        error={summaryError}
       />
 
       {/* SECTION 5 — TRANSLATION */}

@@ -7,6 +7,7 @@ interface SummarySectionProps {
   onGenerateSummary: (type: 'brief' | 'standard' | 'detailed') => Promise<void>;
   isGenerating: boolean;
   contentAvailable: boolean;
+  error?: string | null;
 }
 
 export const SummarySection: React.FC<SummarySectionProps> = ({
@@ -14,6 +15,7 @@ export const SummarySection: React.FC<SummarySectionProps> = ({
   onGenerateSummary,
   isGenerating,
   contentAvailable,
+  error,
 }) => {
   const [selectedType, setSelectedType] = useState<'brief' | 'standard' | 'detailed'>('standard');
   const [isOpen, setIsOpen] = useState<boolean>(true);
@@ -108,6 +110,32 @@ export const SummarySection: React.FC<SummarySectionProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Error state */}
+      {error && (
+        <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl flex items-center justify-between text-xs text-rose-700 dark:text-rose-300">
+          <div className="flex items-center space-x-2">
+            <span className="font-medium">{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleSummarize}
+            className="font-semibold underline hover:no-underline ml-3 flex-shrink-0 cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* In-progress Loading State */}
+      {isGenerating && (
+        <div className="py-6 px-4 flex flex-col items-center justify-center space-y-2 bg-purple-50/50 dark:bg-purple-950/20 rounded-xl border border-dashed border-purple-200 dark:border-purple-800 text-center mb-4">
+          <div className="w-5 h-5 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+            Generating {selectedType} summary with Gemini...
+          </p>
+        </div>
+      )}
 
       {/* Summary Content Body */}
       {summary ? (

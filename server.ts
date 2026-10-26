@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { extractContentFromUrl } from './server/extractor.ts';
-import { summarizeContent, translateContent, transcribeMediaWithGemini } from './server/gemini.ts';
+import { summarizeContent, translateContent, transcribeMediaWithGemini, isQuotaError } from './server/gemini.ts';
 import { validateSafeUrl } from './server/security.ts';
 
 dotenv.config();
@@ -68,7 +68,15 @@ app.post('/api/summarize', async (req, res) => {
     const summary = await summarizeContent(text, summaryType as any);
     res.json({ summary, type: summaryType });
   } catch (err: any) {
-    console.error('Summarize error:', err);
+    if (isQuotaError(err)) {
+      res.status(429).json({
+        error:
+          'Gemini Free Tier daily request quota reached (20/20 requests). Please select or attach a billing-enabled API key in Settings > Secrets.',
+        isQuota: true,
+      });
+      return;
+    }
+    console.warn('Summarize warning:', err.message || err);
     res.status(500).json({
       error: err.message || 'Failed to generate summary.',
     });
@@ -91,7 +99,15 @@ app.post('/api/translate', async (req, res) => {
     const result = await translateContent(text, targetLanguage, sourceLanguage);
     res.json(result);
   } catch (err: any) {
-    console.error('Translate error:', err);
+    if (isQuotaError(err)) {
+      res.status(429).json({
+        error:
+          'Gemini Free Tier daily request quota reached (20/20 requests). Please select or attach a billing-enabled API key in Settings > Secrets to translate content.',
+        isQuota: true,
+      });
+      return;
+    }
+    console.warn('Translate warning:', err.message || err);
     res.status(500).json({
       error: err.message || 'Failed to translate content.',
     });
@@ -110,7 +126,15 @@ app.post('/api/transcribe-upload', async (req, res) => {
     const result = await transcribeMediaWithGemini(base64Data, mimeType, fileName);
     res.json(result);
   } catch (err: any) {
-    console.error('Transcribe media error:', err);
+    if (isQuotaError(err)) {
+      res.status(429).json({
+        error:
+          'Gemini Free Tier daily request quota reached (20/20 requests). Please select or attach a billing-enabled API key in Settings > Secrets to transcribe media.',
+        isQuota: true,
+      });
+      return;
+    }
+    console.warn('Transcribe media warning:', err.message || err);
     res.status(500).json({
       error: err.message || 'Media transcription failed.',
     });

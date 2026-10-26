@@ -20,13 +20,38 @@ export function getGeminiClient(): GoogleGenAI | null {
   return geminiClient;
 }
 
+export class QuotaExceededError extends Error {
+  constructor(message?: string) {
+    super(
+      message ||
+        'Free Tier daily quota exceeded for the Gemini API (20 requests/day limit). To unlock higher limits, select a billing-enabled API key in Settings > Secrets.'
+    );
+    this.name = 'QuotaExceededError';
+  }
+}
+
+export function isQuotaError(err: any): boolean {
+  return Boolean(
+    err?.name === 'QuotaExceededError' ||
+      err?.status === 429 ||
+      err?.message?.includes('RESOURCE_EXHAUSTED') ||
+      err?.message?.includes('quota') ||
+      err?.message?.includes('rate-limit')
+  );
+}
+
 export async function generateContentWithRetry(
   ai: GoogleGenAI,
   params: any,
-  maxRetries = 2
+  maxRetries = 1
 ): Promise<any> {
-  const modelsToTry = [params.model || 'gemini-3.8-flash', 'gemini-flash-latest'];
+  const modelsToTry = [
+    params.model || 'gemini-3.8-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-flash-latest',
+  ];
   let lastError: any = null;
+  let hitQuota = false;
 
   for (const modelName of modelsToTry) {
     let attempt = 0;
@@ -36,23 +61,33 @@ export async function generateContentWithRetry(
       } catch (err: any) {
         lastError = err;
         attempt++;
+
+        if (isQuotaError(err)) {
+          hitQuota = true;
+          // Quota exhausted on this model, try next fallback model immediately without delay
+          break;
+        }
+
         const isTransient =
           err?.status === 503 ||
           err?.message?.includes('503') ||
           err?.message?.includes('high demand') ||
-          err?.message?.includes('RESOURCE_EXHAUSTED') ||
           err?.message?.includes('fetch failed');
+
         if (isTransient) {
           if (attempt <= maxRetries) {
-            await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+            await new Promise((resolve) => setTimeout(resolve, attempt * 600));
             continue;
           }
-          // Break inner loop to try fallback model
           break;
         }
         throw err;
       }
     }
+  }
+
+  if (hitQuota) {
+    throw new QuotaExceededError();
   }
 
   throw lastError || new Error('Gemini API service temporarily unavailable. Please retry in a few moments.');
@@ -181,9 +216,17 @@ CRITICAL INSTRUCTIONS:
       }
     }
   } catch (err: any) {
-    console.warn('Gemini direct video understanding with fileData error:', err.message);
+    if (isQuotaError(err)) {
+      return {
+        title: metadata?.title,
+        transcript: '',
+        transcriptStatus: 'unavailable',
+        visualDescription:
+          'Gemini Free Tier daily request quota reached (20/20 requests). You can paste a transcript, upload media, or attach a billing-enabled API key in Settings > Secrets.',
+      };
+    }
 
-    // Fallback: Gemini multimodal text inquiry with URL Context or metadata
+    // Fallback: Gemini multimodal text inquiry with metadata
     try {
       const fallbackPrompt = `
 Analyze this YouTube video URL: ${youtubeUrl}
@@ -207,7 +250,7 @@ Return a JSON with:
 `;
 
       const fallbackResponse = await generateContentWithRetry(ai, {
-        model: 'gemini-3.8-flash',
+        model: 'gemini-3.1-flash-lite',
         contents: fallbackPrompt,
         config: {
           responseMimeType: 'application/json',
@@ -227,7 +270,7 @@ Return a JSON with:
         };
       }
     } catch (fallbackErr: any) {
-      console.error('Gemini fallback video analysis error:', fallbackErr.message);
+      // Fallback unavailable - return gracefully without unhandled error
     }
   }
 
