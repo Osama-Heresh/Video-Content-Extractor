@@ -12,6 +12,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { ExtractionResult } from '../types.ts';
+import { exportDocumentToPdf } from '../utils/exportPdf.ts';
 
 interface ActionBarProps {
   data: ExtractionResult;
@@ -141,6 +142,19 @@ export const ActionBar: React.FC<ActionBarProps> = ({
     }
   };
 
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    try {
+      setIsExportingPdf(true);
+      await exportDocumentToPdf(data);
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleDownloadTxt = () => {
     const text = compilePlainTextDocument();
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -227,6 +241,18 @@ export const ActionBar: React.FC<ActionBarProps> = ({
               <span>{copiedTranscript ? 'Copied' : 'Copy Transcript'}</span>
             </button>
           )}
+
+          {/* Export to PDF Button */}
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={isExportingPdf}
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-xs shadow-rose-600/20 transition-all disabled:opacity-50 cursor-pointer"
+            title="Export complete document to PDF"
+          >
+            <FileDown className="w-3.5 h-3.5" />
+            <span>{isExportingPdf ? 'Exporting PDF...' : 'Export to PDF'}</span>
+          </button>
 
           <button
             type="button"

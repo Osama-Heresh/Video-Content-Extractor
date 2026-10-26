@@ -23,7 +23,9 @@ export default function App() {
   const [result, setResult] = useState<ExtractionResult | null>(null);
   const [steps, setSteps] = useState<ProcessingStep[]>(INITIAL_STEPS);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState<boolean>(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
 
   // Dark mode toggle
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -58,6 +60,8 @@ export default function App() {
     if (!url.trim() || isLoading) return;
 
     setError(null);
+    setTranslationError(null);
+    setSummaryError(null);
     setIsLoading(true);
     setResult(null);
 
@@ -137,6 +141,8 @@ export default function App() {
   const handleReset = () => {
     setUrl('');
     setError(null);
+    setTranslationError(null);
+    setSummaryError(null);
     setResult(null);
     setSteps(INITIAL_STEPS);
   };
@@ -144,6 +150,7 @@ export default function App() {
   const handleGenerateSummary = async (type: 'brief' | 'standard' | 'detailed') => {
     if (!result) return;
     setIsGeneratingSummary(true);
+    setSummaryError(null);
 
     try {
       const combinedContent = [
@@ -180,7 +187,7 @@ export default function App() {
           : null
       );
     } catch (err: any) {
-      alert(`Summary generation failed: ${err.message}`);
+      setSummaryError(err.message || 'Failed to generate summary');
     } finally {
       setIsGeneratingSummary(false);
     }
@@ -197,6 +204,7 @@ export default function App() {
   }) => {
     if (!result) return;
     setIsTranslating(true);
+    setTranslationError(null);
 
     try {
       let textToTranslate = '';
@@ -254,7 +262,7 @@ export default function App() {
           : null
       );
     } catch (err: any) {
-      alert(`Translation failed: ${err.message}`);
+      setTranslationError(err.message || 'Translation failed. Please try again.');
     } finally {
       setIsTranslating(false);
     }
@@ -324,6 +332,8 @@ export default function App() {
               onTranslate={handleTranslate}
               isTranslating={isTranslating}
               onUpdateTranscript={handleUpdateTranscript}
+              translationError={translationError}
+              summaryError={summaryError}
             />
 
             <ActionBar

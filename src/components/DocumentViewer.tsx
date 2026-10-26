@@ -29,6 +29,8 @@ interface DocumentViewerProps {
   }) => Promise<void>;
   isTranslating: boolean;
   onUpdateTranscript: (text: string, provenance: 'user_provided' | 'ai_transcription') => void;
+  translationError?: string | null;
+  summaryError?: string | null;
 }
 
 export const DocumentViewer: React.FC<DocumentViewerProps> = ({
@@ -38,6 +40,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   onTranslate,
   isTranslating,
   onUpdateTranscript,
+  translationError,
+  summaryError,
 }) => {
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false);
@@ -306,6 +310,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
         isTranslating={isTranslating}
         hasSummary={Boolean(data.summary)}
         hasTranscript={Boolean(data.transcript)}
+        error={translationError}
       />
 
       {/* SECTION 6 — QR CODE */}

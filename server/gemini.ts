@@ -26,18 +26,22 @@ export async function generateContentWithRetry(
   maxRetries = 2
 ): Promise<any> {
   const modelsToTry = [params.model || 'gemini-3.8-flash', 'gemini-flash-latest'];
+  let lastError: any = null;
+
   for (const modelName of modelsToTry) {
     let attempt = 0;
     while (attempt <= maxRetries) {
       try {
         return await ai.models.generateContent({ ...params, model: modelName });
       } catch (err: any) {
+        lastError = err;
         attempt++;
         const isTransient =
           err?.status === 503 ||
           err?.message?.includes('503') ||
           err?.message?.includes('high demand') ||
-          err?.message?.includes('RESOURCE_EXHAUSTED');
+          err?.message?.includes('RESOURCE_EXHAUSTED') ||
+          err?.message?.includes('fetch failed');
         if (isTransient) {
           if (attempt <= maxRetries) {
             await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
@@ -50,6 +54,8 @@ export async function generateContentWithRetry(
       }
     }
   }
+
+  throw lastError || new Error('Gemini API service temporarily unavailable. Please retry in a few moments.');
 }
 
 export interface VideoAnalysisResult {
@@ -344,6 +350,11 @@ export async function translateContent(
 
   const isRtl = /^(arabic|ar|urdu|ur|hebrew|he|persian|fa)$/i.test(targetLanguage.trim());
 
+  const cleanText =
+    text.length > 15000
+      ? text.slice(0, 15000) + '\n\n[Note: Content was trimmed to fit model context limit for translation]'
+      : text;
+
   const prompt = `
 You are a professional translator.
 Translate the following extracted video document content into: ${targetLanguage}.
@@ -357,12 +368,15 @@ RULES:
 - Do NOT add commentary, explanations, or extraneous remarks outside the translation itself.
 
 CONTENT TO TRANSLATE:
-${text}
+${cleanText}
 `;
 
   const response = await generateContentWithRetry(ai, {
     model: 'gemini-3.8-flash',
     contents: prompt,
+    config: {
+      maxOutputTokens: 8192,
+    },
   });
 
   return {

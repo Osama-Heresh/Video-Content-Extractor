@@ -100,7 +100,10 @@ export const QrCodeCard: React.FC<QrCodeCardProps> = ({ sourceUrl }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors">
+    <div
+      id="qrcode-section"
+      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors scroll-mt-20"
+    >
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
         {/* QR Code Canvas */}
         <div className="flex flex-col items-center flex-shrink-0">

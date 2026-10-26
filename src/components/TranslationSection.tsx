@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Languages, RotateCw, Globe2, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Languages, RotateCw, Globe2, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { TranslationData } from '../types.ts';
 
 const STANDARD_LANGUAGES = [
@@ -25,6 +25,7 @@ interface TranslationSectionProps {
   isTranslating: boolean;
   hasSummary: boolean;
   hasTranscript: boolean;
+  error?: string | null;
 }
 
 export const TranslationSection: React.FC<TranslationSectionProps> = ({
@@ -34,6 +35,7 @@ export const TranslationSection: React.FC<TranslationSectionProps> = ({
   isTranslating,
   hasSummary,
   hasTranscript,
+  error,
 }) => {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('Spanish');
   const [customLanguage, setCustomLanguage] = useState<string>('');
@@ -41,13 +43,29 @@ export const TranslationSection: React.FC<TranslationSectionProps> = ({
   const [scope, setScope] = useState<'entire' | 'transcript' | 'page_text' | 'summary'>('entire');
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (detectedLanguage) {
+      setSourceLanguage(detectedLanguage);
+    }
+  }, [detectedLanguage]);
+
+  // Adjust scope if current selected scope is no longer available
+  useEffect(() => {
+    if (scope === 'transcript' && !hasTranscript) {
+      setScope('entire');
+    }
+    if (scope === 'summary' && !hasSummary) {
+      setScope('entire');
+    }
+  }, [hasTranscript, hasSummary, scope]);
+
   const effectiveTarget = selectedLanguage === 'Other' ? customLanguage.trim() : selectedLanguage;
 
   const handleTranslateClick = () => {
-    if (!effectiveTarget) return;
+    if (!effectiveTarget || isTranslating) return;
     onTranslate({
       targetLanguage: effectiveTarget,
-      sourceLanguage,
+      sourceLanguage: sourceLanguage || detectedLanguage || 'English',
       scope,
     });
   };
@@ -64,7 +82,10 @@ export const TranslationSection: React.FC<TranslationSectionProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors document-card">
+    <div
+      id="translation-section"
+      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors document-card scroll-mt-20"
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
         <div>
           <div className="flex items-center space-x-2">
@@ -102,7 +123,7 @@ export const TranslationSection: React.FC<TranslationSectionProps> = ({
               type="text"
               value={customLanguage}
               onChange={(e) => setCustomLanguage(e.target.value)}
-              placeholder="e.g. Japanese, Italian"
+              placeholder="e.g. Japanese"
               className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 w-28 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           )}
@@ -128,7 +149,7 @@ export const TranslationSection: React.FC<TranslationSectionProps> = ({
           >
             {isTranslating ? (
               <>
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Translating...</span>
               </>
             ) : translation ? (
@@ -146,8 +167,40 @@ export const TranslationSection: React.FC<TranslationSectionProps> = ({
         </div>
       </div>
 
+      {/* Error state */}
+      {error && (
+        <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl flex items-center justify-between text-xs text-rose-700 dark:text-rose-300">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleTranslateClick}
+            className="font-semibold underline hover:no-underline ml-3 flex-shrink-0 cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* In-progress Loading State */}
+      {isTranslating && (
+        <div className="py-8 px-4 flex flex-col items-center justify-center space-y-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl border border-dashed border-blue-200 dark:border-blue-800 text-center">
+          <Loader2 className="w-7 h-7 text-blue-600 animate-spin" />
+          <div>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              Translating into {effectiveTarget}...
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Gemini is translating while preserving formatting, headings, and timestamps.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Translation Content */}
-      {translation ? (
+      {!isTranslating && translation && (
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pb-1">
             <div className="flex items-center space-x-2">
@@ -182,7 +235,9 @@ export const TranslationSection: React.FC<TranslationSectionProps> = ({
             {translation.content}
           </div>
         </div>
-      ) : (
+      )}
+
+      {!isTranslating && !translation && (
         <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-xs">
           <p>Click "Translate" above to translate the document or specific section into your chosen language.</p>
         </div>
