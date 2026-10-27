@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { ExtractionResult } from '../types.ts';
@@ -245,6 +245,16 @@ export async function exportDocumentToPdf(data: ExtractionResult): Promise<void>
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
+      onclone: (clonedDoc) => {
+        if (clonedDoc.documentElement) {
+          clonedDoc.documentElement.style.backgroundColor = '#ffffff';
+          clonedDoc.documentElement.style.color = '#0f172a';
+        }
+        if (clonedDoc.body) {
+          clonedDoc.body.style.backgroundColor = '#ffffff';
+          clonedDoc.body.style.color = '#0f172a';
+        }
+      },
     });
 
     const doc = new jsPDF({

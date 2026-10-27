@@ -229,7 +229,7 @@ export const TranslationSection: React.FC<TranslationSectionProps> = ({
           <div
             dir={translation.isRtl ? 'rtl' : 'ltr'}
             className={`prose prose-slate dark:prose-invert max-w-none text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line bg-slate-50/70 dark:bg-slate-800/40 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 ${
-              translation.isRtl ? 'text-right font-serif' : 'text-left'
+              translation.isRtl ? 'text-right [font-family:"Noto_Sans_Arabic",Tahoma,Segoe_UI,system-ui,sans-serif]' : 'text-left'
             }`}
           >
             {translation.content}

@@ -379,6 +379,63 @@ ${content}
 }
 
 /**
+ * Cleans and normalizes the translation string to guarantee pure, valid UTF-8 text.
+ * Strips accidental markdown code fences, unescapes unicode sequences if needed,
+ * and normalizes via Unicode NFC.
+ */
+export function cleanTranslationString(rawText: string): string {
+  if (!rawText || typeof rawText !== 'string') {
+    return '';
+  }
+
+  let text = rawText.trim();
+
+  // Strip wrapping markdown code blocks if the model generated them
+  if (text.startsWith('```')) {
+    text = text.replace(/^```[a-zA-Z0-9_-]*\r?\n/, '');
+    text = text.replace(/\r?\n```$/, '');
+    text = text.trim();
+  }
+
+  // If the model wrapped the entire response in quotes, unwrap cleanly
+  if (
+    (text.startsWith('"') && text.endsWith('"') && text.length > 2) ||
+    (text.startsWith('“') && text.endsWith('”') && text.length > 2)
+  ) {
+    try {
+      const parsed = JSON.parse(text);
+      if (typeof parsed === 'string') {
+        text = parsed;
+      } else {
+        text = text.slice(1, -1);
+      }
+    } catch {
+      text = text.slice(1, -1);
+    }
+  }
+
+  // Unescape any literal unicode escape sequences like \u0627\u0644
+  if (/\\u[0-9a-fA-F]{4}/.test(text)) {
+    try {
+      text = text.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+        String.fromCharCode(parseInt(hex, 16))
+      );
+    } catch {
+      // Keep as-is if parsing fails
+    }
+  }
+
+  // Unicode Normalization Form C for canonical character composition
+  try {
+    text = text.normalize('NFC');
+  } catch {
+    // Fallback if normalize not supported
+  }
+
+  return text.trim();
+}
+
+/**
  * Translates content into the requested language with RTL awareness for Arabic and Urdu.
  */
 export async function translateContent(
@@ -422,8 +479,11 @@ ${cleanText}
     },
   });
 
+  const rawText = response.text || '';
+  const cleanedTranslation = cleanTranslationString(rawText) || 'Translation failed.';
+
   return {
-    translation: response.text?.trim() || 'Translation failed.',
+    translation: cleanedTranslation,
     isRtl,
   };
 }

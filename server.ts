@@ -97,6 +97,7 @@ app.post('/api/translate', async (req, res) => {
     }
 
     const result = await translateContent(text, targetLanguage, sourceLanguage);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.json(result);
   } catch (err: any) {
     if (isQuotaError(err)) {

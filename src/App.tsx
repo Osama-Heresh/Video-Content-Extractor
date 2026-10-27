@@ -246,6 +246,13 @@ export default function App() {
       }
 
       const data = await res.json();
+      const cleanContent =
+        typeof data.translation === 'string'
+          ? data.translation.normalize
+            ? data.translation.normalize('NFC')
+            : data.translation
+          : String(data.translation || '');
+
       setResult((prev) =>
         prev
           ? {
@@ -254,13 +261,21 @@ export default function App() {
                 targetLanguage,
                 sourceLanguage,
                 scope,
-                content: data.translation,
+                content: cleanContent,
                 isRtl: Boolean(data.isRtl),
                 translatedAt: new Date().toISOString(),
               },
             }
           : null
       );
+
+      // Auto-scroll to the translation section smoothly
+      setTimeout(() => {
+        const el = document.getElementById('translation-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 100);
     } catch (err: any) {
       setTranslationError(err.message || 'Translation failed. Please try again.');
     } finally {
